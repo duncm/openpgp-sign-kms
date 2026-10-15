@@ -27,8 +27,8 @@ The publishing job uses a repository-scoped GitHub App token from the protected
 `release` environment. This permits major-tag updates under actor-restricted tag
 rules without giving the App a bypass for `main` or version tags.
 Follow the CLI's [release App setup guide](https://github.com/duncm/openpgp-sign-kms-cli/blob/main/docs/release-app.md)
-for the shared App, environment variables, and secret. Configure the App before
-merging this authentication change or enabling the major-tag update restriction.
+for the shared App, variables, and environment secret. Major-tag creation and
+updates are restricted to the release App; deletion remains blocked.
 
 ## Publish the action
 
