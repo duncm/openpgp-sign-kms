@@ -1,7 +1,7 @@
 # OpenPGP Sign with AWS KMS
 
 Sign a file with an asymmetric AWS KMS key and produce a GPG-compatible output.
-Runs on Linux x86_64 and ARM64.
+Runs on Linux x86_64 and ARM64 with glibc 2.35+; tested on Ubuntu 22.04/24.04.
 
 > Initial release preparation: the action cannot run until a verified CLI release
 > is pinned. Use a published action release once available.
