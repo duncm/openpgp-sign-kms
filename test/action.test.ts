@@ -4,7 +4,7 @@ import {mkdtemp,writeFile,symlink,link,rm} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {parse,validate,argumentsFor} from '../src/config.js';
-import {platformKey,digest,run} from '../src/download.js';
+import {platformKey,digest,run,verifyFile} from '../src/download.js';
 const key='arn:aws:kms:us-east-1:123456789012:key/12345678-1234-1234-1234-123456789012';
 test('modes, armor and default filenames',()=>{
   for(const armor of ['true','false']) for(const mode of ['attached','detached','clear']) {
@@ -24,6 +24,9 @@ test('destinations, symlinks, hardlinks and missing input',async()=>{
     await link(c.input,c.output);await assert.rejects(validate(c));await rm(c.output);
     await assert.rejects(validate({...c,input:join(dir,'missing')}));
     assert.equal(await digest(c.input),'3a6eb0790f39ac87c94f3856b2dd2c5d110e6811602261a9a923d3bb23adc8b7');
+    await verifyFile(c.input,await digest(c.input));
+    await assert.rejects(verifyFile(c.input,'0'.repeat(64)));
+    await assert.rejects(verifyFile(c.input,'not-a-hash'));
   }finally{await rm(dir,{recursive:true,force:true});}
 });
 test('platform gate',()=>{assert.equal(platformKey('linux','arm64'),'aarch64-unknown-linux-gnu');assert.equal(platformKey('linux','x64'),'x86_64-unknown-linux-gnu');assert.throws(()=>platformKey('win32','x64'));});

@@ -23536,6 +23536,9 @@ async function digest(path5) {
   for await (const chunk of (0, import_node_fs2.createReadStream)(path5)) hash.update(chunk);
   return hash.digest("hex");
 }
+async function verifyFile(path5, expected) {
+  if (!/^[a-f0-9]{64}$/.test(expected) || await digest(path5) !== expected) throw new Error("CLI checksum mismatch");
+}
 function platformKey(platform2 = process.platform, arch3 = process.arch) {
   if (platform2 !== "linux" || !["x64", "arm64"].includes(arch3)) throw new Error("Supported runners: Linux x86_64 and ARM64");
   return arch3 === "x64" ? "x86_64-unknown-linux-gnu" : "aarch64-unknown-linux-gnu";
@@ -23548,16 +23551,16 @@ async function executable() {
   const cached = find(cacheName, cli_release_default.version, target);
   if (cached) {
     const binary = (0, import_node_path2.join)(cached, "openpgp-sign-kms");
-    if (await digest(binary) !== asset.binary_sha256) throw new Error("Cached CLI checksum mismatch");
+    await verifyFile(binary, asset.binary_sha256);
     return binary;
   }
   const dir = await (0, import_promises2.mkdtemp)((0, import_node_path2.join)((0, import_node_os.tmpdir)(), "openpgp-kms-"));
   try {
     const archive = await downloadTool(`https://github.com/${cli_release_default.repository}/releases/download/v${cli_release_default.version}/${asset.name}`, (0, import_node_path2.join)(dir, "archive.tar.gz"));
-    if (await digest(archive) !== asset.sha256) throw new Error("CLI archive checksum mismatch");
+    await verifyFile(archive, asset.sha256);
     const extracted = await extractTar(archive, (0, import_node_path2.join)(dir, "extracted"));
     const binary = (0, import_node_path2.join)(extracted, "openpgp-sign-kms");
-    if (await digest(binary) !== asset.binary_sha256) throw new Error("CLI executable checksum mismatch");
+    await verifyFile(binary, asset.binary_sha256);
     await (0, import_promises2.chmod)(binary, 493);
     const dest = await cacheFile(binary, "openpgp-sign-kms", cacheName, cli_release_default.version, target);
     return (0, import_node_path2.join)(dest, "openpgp-sign-kms");
