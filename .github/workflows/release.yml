@@ -32,16 +32,27 @@ jobs:
       id-token: write
   publish:
     needs: integration
+    environment: release
     runs-on: ubuntu-24.04
     permissions:
-      contents: write
+      contents: read
     steps:
+      - name: Create repository-scoped release token
+        id: release-token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+          permission-contents: write
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
+          token: ${{ steps.release-token.outputs.token }}
       - name: Publish action and advance major tag
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ steps.release-token.outputs.token }}
           VERSION_TAG: ${{ github.ref_name }}
         run: |
           set -euo pipefail
