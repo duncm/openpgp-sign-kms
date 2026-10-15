@@ -1,0 +1,90 @@
+name: AWS integration
+on:
+  workflow_dispatch:
+  workflow_call:
+permissions:
+  contents: read
+  id-token: write
+jobs:
+  test:
+    environment: integration
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, ubuntu-22.04-arm]
+        key: [RSA, ED25519]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+      - run: git merge-base --is-ancestor HEAD origin/main
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: node scripts/pin-cli.mjs --check
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          role-session-name: action-integration-${{ github.run_id }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - name: Test input and certificate
+        id: setup
+        env:
+          KEY: ${{ matrix.key == 'RSA' && vars.KMS_RSA_KEY_ARN || vars.KMS_ED25519_KEY_ARN }}
+        run: |
+          test -n "$KEY"
+          printf 'Integration test\n- signed text\n' > input.txt
+          npx tsx scripts/resolve-cli.ts >> "$GITHUB_OUTPUT"
+      - uses: ./
+        with:
+          key: ${{ matrix.key == 'RSA' && vars.KMS_RSA_KEY_ARN || vars.KMS_ED25519_KEY_ARN }}
+          path: input.txt
+          output_path: attached.gpg
+          description: action-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.os }}-${{ matrix.key }}
+      - uses: ./
+        with:
+          key: ${{ matrix.key == 'RSA' && vars.KMS_RSA_KEY_ARN || vars.KMS_ED25519_KEY_ARN }}
+          path: input.txt
+          output_path: attached.asc
+          armor: true
+      - uses: ./
+        with:
+          key: ${{ matrix.key == 'RSA' && vars.KMS_RSA_KEY_ARN || vars.KMS_ED25519_KEY_ARN }}
+          path: input.txt
+          detach_sign: true
+      - uses: ./
+        with:
+          key: ${{ matrix.key == 'RSA' && vars.KMS_RSA_KEY_ARN || vars.KMS_ED25519_KEY_ARN }}
+          path: input.txt
+          detach_sign: true
+          armor: true
+          output_path: detached.asc
+      - uses: ./
+        with:
+          key: ${{ matrix.key == 'RSA' && vars.KMS_RSA_KEY_ARN || vars.KMS_ED25519_KEY_ARN }}
+          path: input.txt
+          clear_sign: true
+          output_path: clear.asc
+      - name: Verify results and CloudTrail
+        env:
+          CLI: ${{ steps.setup.outputs.cli }}
+          KEY: ${{ matrix.key == 'RSA' && vars.KMS_RSA_KEY_ARN || vars.KMS_ED25519_KEY_ARN }}
+          DESCRIPTION: action-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.os }}-${{ matrix.key }}
+        run: |
+          export GNUPGHOME="$(mktemp -d)"
+          "$CLI" --export -u "$KEY" --export-name Test --export-email test@example.com -a -o public.asc
+          gpg --batch --import public.asc
+          gpg --verify attached.gpg
+          gpg --verify attached.asc
+          gpg --verify input.txt.sig input.txt
+          gpg --verify detached.asc input.txt
+          gpg --verify clear.asc
+          gpg --batch --output extracted.txt --decrypt attached.gpg
+          cmp extracted.txt input.txt
+          python3 scripts/cloudtrail.py "$DESCRIPTION"
