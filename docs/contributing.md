@@ -5,6 +5,7 @@ Use Node.js 24:
 ```sh
 npm ci
 npm run check
+python3 -m unittest discover -s scripts/tests -v
 python3 scripts/check-docs.py
 ```
 
