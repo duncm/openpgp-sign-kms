@@ -16,3 +16,9 @@ against the committed release manifest.
 Offline tests cover inputs, filenames, destinations, argument handling and
 process failures. Live tests use the bundled action and the exact pinned CLI.
 See [release procedures](releases.md) for workflow configuration.
+
+## Commit signatures
+
+All commits must be OpenPGP/GPG signed. Configure your signing key and use
+`git commit -S`; verify with `git log --show-signature`. Do not disable commit
+signing when preparing changes or releases.
