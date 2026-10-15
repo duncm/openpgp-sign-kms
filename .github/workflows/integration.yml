@@ -40,7 +40,7 @@ jobs:
         run: |
           test -n "$KEY"
           printf 'Integration test\n- signed text\n' > input.txt
-          npx tsx scripts/resolve-cli.ts >> "$GITHUB_OUTPUT"
+          npx tsx scripts/resolve-cli.ts
       - uses: ./
         with:
           key: ${{ matrix.key == 'RSA' && vars.KMS_RSA_KEY_ARN || vars.KMS_ED25519_KEY_ARN }}

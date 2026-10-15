@@ -1,2 +1,3 @@
+import * as core from "@actions/core";
 import { executable } from "../src/download.js";
-console.log("cli=" + (await executable()));
+core.setOutput("cli", await executable());
