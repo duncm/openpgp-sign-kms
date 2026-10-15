@@ -1,5 +1,16 @@
 {
-  "version": "0.1.0",
+  "version": "0.1.0-rc.1",
   "repository": "duncm/openpgp-sign-kms-cli",
-  "assets": {}
+  "assets": {
+    "x86_64-unknown-linux-gnu": {
+      "name": "openpgp-sign-kms-0.1.0-rc.1-x86_64-unknown-linux-gnu.tar.gz",
+      "sha256": "70c079a2d19d3d904ecb3afee39b848d1e099eec36de5a15c77e660e582fffae",
+      "binary_sha256": "eecaf4ff6cb244c909762d48c563851809d7b445828fb89dfe6c72957f23192f"
+    },
+    "aarch64-unknown-linux-gnu": {
+      "name": "openpgp-sign-kms-0.1.0-rc.1-aarch64-unknown-linux-gnu.tar.gz",
+      "sha256": "5e79ea7f8807cc1af0b24548904a142605aebbe8cef47c60319e5088bf7411c5",
+      "binary_sha256": "5ce257db64b06049c78749d88303c22b167eedf7cee5eac4147786ba7ea06446"
+    }
+  }
 }

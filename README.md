@@ -3,9 +3,6 @@
 Sign a file with an asymmetric AWS KMS key and produce a GPG-compatible output.
 Runs on Linux x86_64 and ARM64 with glibc 2.35+; tested on Ubuntu 22.04/24.04.
 
-> Initial release preparation: the action cannot run until a verified CLI release
-> is pinned. Use a published action release once available.
-
 ## Quick start
 
 First [create a KMS signing key](https://github.com/duncm/openpgp-sign-kms-cli/blob/main/docs/aws.md)
@@ -25,7 +22,7 @@ jobs:
         with:
           role-to-assume: arn:aws:iam::ACCOUNT:role/ROLE
           aws-region: REGION
-      - uses: duncm/openpgp-sign-kms@v0
+      - uses: duncm/openpgp-sign-kms@v0.1.0-rc.1
         id: signature
         with:
           key: arn:aws:kms:REGION:ACCOUNT:key/KEY-ID
