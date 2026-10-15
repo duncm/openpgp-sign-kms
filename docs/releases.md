@@ -21,6 +21,15 @@ This verifies the CLI release's GitHub provenance and computes archive/executabl
 checksums. Review and commit `cli-release.json` and rebuilt `dist` files together.
 An empty manifest is the initial bootstrap state and blocks action execution/release.
 
+## Release credentials
+
+The publishing job uses a repository-scoped GitHub App token from the protected
+`release` environment. This permits major-tag updates under actor-restricted tag
+rules without giving the App a bypass for `main` or version tags.
+Follow the CLI's [release App setup guide](https://github.com/duncm/openpgp-sign-kms-cli/blob/main/docs/release-app.md)
+for the shared App, environment variables, and secret. Configure the App before
+merging this authentication change or enabling the major-tag update restriction.
+
 ## Publish the action
 
 1. Update `package.json` and its lockfile version through a main-branch change.
