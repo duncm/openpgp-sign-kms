@@ -1,2 +1,2 @@
-import {executable} from '../src/download.js';
-console.log('cli='+await executable());
+import { executable } from "../src/download.js";
+console.log("cli=" + (await executable()));
