@@ -23108,23 +23108,36 @@ function boolean(value, name) {
 function parse(inputs, cwd = process.cwd()) {
   const key = inputs.key?.trim();
   const path5 = inputs.path;
-  if (!key || !/^arn:(aws|aws-cn|aws-us-gov):kms:[a-z0-9-]+:\d{12}:key\/(?:[0-9a-f-]{36}|mrk-[0-9a-f]{32})$/i.test(key)) throw new Error("key must be a concrete AWS KMS key ARN");
+  if (!key || !/^arn:(aws|aws-cn|aws-us-gov):kms:[a-z0-9-]+:\d{12}:key\/(?:[0-9a-f-]{36}|mrk-[0-9a-f]{32})$/i.test(
+    key
+  ))
+    throw new Error("key must be a concrete AWS KMS key ARN");
   if (!path5) throw new Error("path is required");
   const detached = boolean(inputs.detach_sign ?? "", "detach_sign");
   const clear = boolean(inputs.clear_sign ?? "", "clear_sign");
-  if (detached && clear) throw new Error("detach_sign and clear_sign cannot both be true");
+  if (detached && clear)
+    throw new Error("detach_sign and clear_sign cannot both be true");
   const armor = boolean(inputs.armor ?? "", "armor");
   const mode = clear ? "clear" : detached ? "detached" : "attached";
   const suffix = clear || armor ? ".asc" : detached ? ".sig" : ".gpg";
   const input = (0, import_node_path.resolve)(cwd, path5), output = (0, import_node_path.resolve)(cwd, inputs.output_path || `${path5}${suffix}`);
   if (input === output) throw new Error("output aliases input");
-  return { key, input, output, armor, mode, description: inputs.description ?? "" };
+  return {
+    key,
+    input,
+    output,
+    armor,
+    mode,
+    description: inputs.description ?? ""
+  };
 }
 async function validate(config) {
-  if (!(await (0, import_promises.stat)(config.input)).isFile()) throw new Error("input must be a regular file");
+  if (!(await (0, import_promises.stat)(config.input)).isFile())
+    throw new Error("input must be a regular file");
   await (0, import_promises.access)(config.input, import_node_fs.constants.R_OK);
   const parent = await (0, import_promises.realpath)((0, import_node_path.dirname)(config.output));
-  if ((0, import_node_path.resolve)(parent, config.output.slice((0, import_node_path.dirname)(config.output).length + 1)) === await (0, import_promises.realpath)(config.input)) throw new Error("output aliases input");
+  if ((0, import_node_path.resolve)(parent, config.output.slice((0, import_node_path.dirname)(config.output).length + 1)) === await (0, import_promises.realpath)(config.input))
+    throw new Error("output aliases input");
   try {
     await (0, import_promises.lstat)(config.output);
   } catch (e) {
@@ -23537,16 +23550,21 @@ async function digest(path5) {
   return hash.digest("hex");
 }
 async function verifyFile(path5, expected) {
-  if (!/^[a-f0-9]{64}$/.test(expected) || await digest(path5) !== expected) throw new Error("CLI checksum mismatch");
+  if (!/^[a-f0-9]{64}$/.test(expected) || await digest(path5) !== expected)
+    throw new Error("CLI checksum mismatch");
 }
 function platformKey(platform2 = process.platform, arch3 = process.arch) {
-  if (platform2 !== "linux" || !["x64", "arm64"].includes(arch3)) throw new Error("Supported runners: Linux x86_64 and ARM64");
+  if (platform2 !== "linux" || !["x64", "arm64"].includes(arch3))
+    throw new Error("Supported runners: Linux x86_64 and ARM64");
   return arch3 === "x64" ? "x86_64-unknown-linux-gnu" : "aarch64-unknown-linux-gnu";
 }
 async function executable() {
   const target = platformKey();
   const asset = cli_release_default.assets[target];
-  if (!asset || ![asset.sha256, asset.binary_sha256].every((h) => /^[a-f0-9]{64}$/.test(h))) throw new Error("CLI release is not pinned yet; maintainers must run scripts/pin-cli.mjs before releasing the action");
+  if (!asset || ![asset.sha256, asset.binary_sha256].every((h) => /^[a-f0-9]{64}$/.test(h)))
+    throw new Error(
+      "CLI release is not pinned yet; maintainers must run scripts/pin-cli.mjs before releasing the action"
+    );
   const cacheName = `openpgp-sign-kms-${asset.binary_sha256}`;
   const cached = find(cacheName, cli_release_default.version, target);
   if (cached) {
@@ -23556,13 +23574,22 @@ async function executable() {
   }
   const dir = await (0, import_promises2.mkdtemp)((0, import_node_path2.join)((0, import_node_os.tmpdir)(), "openpgp-kms-"));
   try {
-    const archive = await downloadTool(`https://github.com/${cli_release_default.repository}/releases/download/v${cli_release_default.version}/${asset.name}`, (0, import_node_path2.join)(dir, "archive.tar.gz"));
+    const archive = await downloadTool(
+      `https://github.com/${cli_release_default.repository}/releases/download/v${cli_release_default.version}/${asset.name}`,
+      (0, import_node_path2.join)(dir, "archive.tar.gz")
+    );
     await verifyFile(archive, asset.sha256);
     const extracted = await extractTar(archive, (0, import_node_path2.join)(dir, "extracted"));
     const binary = (0, import_node_path2.join)(extracted, "openpgp-sign-kms");
     await verifyFile(binary, asset.binary_sha256);
     await (0, import_promises2.chmod)(binary, 493);
-    const dest = await cacheFile(binary, "openpgp-sign-kms", cacheName, cli_release_default.version, target);
+    const dest = await cacheFile(
+      binary,
+      "openpgp-sign-kms",
+      cacheName,
+      cli_release_default.version,
+      target
+    );
     return (0, import_node_path2.join)(dest, "openpgp-sign-kms");
   } finally {
     await (0, import_promises2.rm)(dir, { recursive: true, force: true });
@@ -23570,20 +23597,38 @@ async function executable() {
 }
 async function run(binary, args) {
   await new Promise((resolve3, reject) => {
-    const child2 = (0, import_node_child_process.spawn)(binary, args, { stdio: ["ignore", "inherit", "inherit"], shell: false });
+    const child2 = (0, import_node_child_process.spawn)(binary, args, {
+      stdio: ["ignore", "inherit", "inherit"],
+      shell: false
+    });
     child2.once("error", reject);
-    child2.once("exit", (code, signal) => code === 0 ? resolve3() : reject(new Error(`CLI failed (${signal ?? code})`)));
+    child2.once(
+      "exit",
+      (code, signal) => code === 0 ? resolve3() : reject(new Error(`CLI failed (${signal ?? code})`))
+    );
   });
 }
 
 // src/index.ts
 async function main() {
   platformKey();
-  const inputs = Object.fromEntries(["key", "path", "output_path", "description", "armor", "detach_sign", "clear_sign"].map((name) => [name, getInput(name, { trimWhitespace: false })]));
+  const inputs = Object.fromEntries(
+    [
+      "key",
+      "path",
+      "output_path",
+      "description",
+      "armor",
+      "detach_sign",
+      "clear_sign"
+    ].map((name) => [name, getInput(name, { trimWhitespace: false })])
+  );
   const config = parse(inputs);
   await validate(config);
   await run(await executable(), argumentsFor(config));
   setOutput("output_path", config.output);
 }
-main().catch((error2) => setFailed(error2 instanceof Error ? error2.message : String(error2)));
+main().catch(
+  (error2) => setFailed(error2 instanceof Error ? error2.message : String(error2))
+);
 //# sourceMappingURL=index.cjs.map
