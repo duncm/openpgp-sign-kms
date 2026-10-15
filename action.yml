@@ -1,0 +1,32 @@
+name: OpenPGP Sign with AWS KMS
+description: Create OpenPGP signatures using an asymmetric AWS KMS key
+author: duncm
+branding:
+  icon: lock
+  color: blue
+inputs:
+  key:
+    description: AWS KMS asymmetric signing key ARN
+    required: true
+  path:
+    description: File to sign
+    required: true
+  output_path:
+    description: Output file (defaults to the input path plus .gpg, .sig, or .asc)
+  description:
+    description: Optional audit description recorded in the KMS request User-Agent
+  armor:
+    description: ASCII armor for attached or detached output
+    default: 'false'
+  detach_sign:
+    description: Create a detached signature
+    default: 'false'
+  clear_sign:
+    description: Create a clear-signed text message
+    default: 'false'
+outputs:
+  output_path:
+    description: Absolute path of the completed output file
+runs:
+  using: node24
+  main: dist/index.cjs

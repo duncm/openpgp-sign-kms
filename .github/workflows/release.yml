@@ -1,0 +1,62 @@
+name: Release
+on:
+  push:
+    tags: ['v*.*.*']
+permissions:
+  contents: read
+concurrency:
+  group: action-release
+  cancel-in-progress: false
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+      - run: python3 scripts/validate-release.py
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24'
+      - run: node scripts/pin-cli.mjs --check
+        env:
+          GH_TOKEN: ${{ github.token }}
+  ci:
+    needs: validate
+    uses: ./.github/workflows/ci.yml
+  integration:
+    needs: ci
+    uses: ./.github/workflows/integration.yml
+    permissions:
+      contents: read
+      id-token: write
+  publish:
+    needs: integration
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+      - name: Publish action and advance major tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION_TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          if gh release view "$VERSION_TAG" >/dev/null 2>&1; then
+            echo 'Release exists; refusing to overwrite.' >&2; exit 1
+          fi
+          args=(--verify-tag --generate-notes)
+          if [[ "$VERSION_TAG" == *-* ]]; then args+=(--prerelease --latest=false); fi
+          gh release create "$VERSION_TAG" "${args[@]}"
+          if [[ "$VERSION_TAG" != *-* ]]; then
+            major="${VERSION_TAG%%.*}"
+            # Never move a major tag backwards when releasing an older maintenance version.
+            latest=$(git tag -l "$major.*" | grep -v -- '-' | sort -V | tail -1)
+            if [[ "$latest" == "$VERSION_TAG" ]]; then
+              git tag -f "$major" "$GITHUB_SHA"
+              git push origin "refs/tags/$major" --force
+            fi
+          fi
