@@ -28,6 +28,7 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
+          python3 -m unittest discover -s scripts/tests -v
           npm run check 2>&1 | tee test-report.log
           git diff --exit-code -- dist
           python3 scripts/check-docs.py

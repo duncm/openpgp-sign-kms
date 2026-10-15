@@ -4,12 +4,14 @@ on:
   workflow_call:
 permissions:
   contents: read
-  id-token: write
 jobs:
   test:
+    permissions:
+      contents: read
+      id-token: write
     environment: integration
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 25
+    timeout-minutes: 35
     strategy:
       fail-fast: false
       matrix:
@@ -28,53 +30,60 @@ jobs:
       - run: node scripts/pin-cli.mjs --check
         env:
           GH_TOKEN: ${{ github.token }}
-      - uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4
+      - id: credentials
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4
         with:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           role-session-name: action-integration-${{ github.run_id }}
           aws-region: ${{ vars.AWS_REGION }}
+      - name: Create temporary key
+        id: keys
+        env:
+          KMS_TEST_JOB: test-${{ matrix.os }}-${{ matrix.key }}
+          KEY_KIND: ${{ matrix.key }}
+        run: python3 scripts/kms-test-keys.py create --kind "$KEY_KIND" --state "$RUNNER_TEMP/kms-test-keys.jsonl"
       - name: Test input and certificate
         id: setup
         env:
-          KEY: ${{ matrix.key == 'RSA' && vars.KMS_RSA_KEY_ARN || vars.KMS_ED25519_KEY_ARN }}
+          KEY: ${{ matrix.key == 'RSA' && env.KMS_RSA_KEY_ARN || env.KMS_ED25519_KEY_ARN }}
         run: |
           test -n "$KEY"
           printf 'Integration test\n- signed text\n' > input.txt
           npx tsx scripts/resolve-cli.ts
       - uses: ./
         with:
-          key: ${{ matrix.key == 'RSA' && vars.KMS_RSA_KEY_ARN || vars.KMS_ED25519_KEY_ARN }}
+          key: ${{ matrix.key == 'RSA' && env.KMS_RSA_KEY_ARN || env.KMS_ED25519_KEY_ARN }}
           path: input.txt
           output_path: attached.gpg
           description: action-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.os }}-${{ matrix.key }}
       - uses: ./
         with:
-          key: ${{ matrix.key == 'RSA' && vars.KMS_RSA_KEY_ARN || vars.KMS_ED25519_KEY_ARN }}
+          key: ${{ matrix.key == 'RSA' && env.KMS_RSA_KEY_ARN || env.KMS_ED25519_KEY_ARN }}
           path: input.txt
           output_path: attached.asc
           armor: true
       - uses: ./
         with:
-          key: ${{ matrix.key == 'RSA' && vars.KMS_RSA_KEY_ARN || vars.KMS_ED25519_KEY_ARN }}
+          key: ${{ matrix.key == 'RSA' && env.KMS_RSA_KEY_ARN || env.KMS_ED25519_KEY_ARN }}
           path: input.txt
           detach_sign: true
       - uses: ./
         with:
-          key: ${{ matrix.key == 'RSA' && vars.KMS_RSA_KEY_ARN || vars.KMS_ED25519_KEY_ARN }}
+          key: ${{ matrix.key == 'RSA' && env.KMS_RSA_KEY_ARN || env.KMS_ED25519_KEY_ARN }}
           path: input.txt
           detach_sign: true
           armor: true
           output_path: detached.asc
       - uses: ./
         with:
-          key: ${{ matrix.key == 'RSA' && vars.KMS_RSA_KEY_ARN || vars.KMS_ED25519_KEY_ARN }}
+          key: ${{ matrix.key == 'RSA' && env.KMS_RSA_KEY_ARN || env.KMS_ED25519_KEY_ARN }}
           path: input.txt
           clear_sign: true
           output_path: clear.asc
       - name: Verify results and CloudTrail
         env:
           CLI: ${{ steps.setup.outputs.cli }}
-          KEY: ${{ matrix.key == 'RSA' && vars.KMS_RSA_KEY_ARN || vars.KMS_ED25519_KEY_ARN }}
+          KEY: ${{ matrix.key == 'RSA' && env.KMS_RSA_KEY_ARN || env.KMS_ED25519_KEY_ARN }}
           DESCRIPTION: action-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.os }}-${{ matrix.key }}
         run: |
           export GNUPGHOME="$(mktemp -d)"
@@ -88,3 +97,24 @@ jobs:
           gpg --batch --output extracted.txt --decrypt attached.gpg
           cmp extracted.txt input.txt
           python3 scripts/cloudtrail.py "$DESCRIPTION"
+      - name: Refresh cleanup credentials
+        if: ${{ always() && steps.credentials.outcome == 'success' && steps.keys.outcome != 'skipped' }}
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          role-session-name: action-cleanup-${{ github.run_id }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - name: Schedule temporary key deletion
+        if: ${{ always() && steps.credentials.outcome == 'success' && steps.keys.outcome != 'skipped' }}
+        timeout-minutes: 15
+        env:
+          KMS_TEST_JOB: test-${{ matrix.os }}-${{ matrix.key }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/kms-test-keys.py cleanup --state "$RUNNER_TEMP/kms-test-keys.jsonl" 2>&1 | tee "$RUNNER_TEMP/kms-key-cleanup.log"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: key-cleanup-${{ matrix.os }}-${{ matrix.key }}
+          path: ${{ runner.temp }}/kms-key-cleanup.log
