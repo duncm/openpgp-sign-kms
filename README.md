@@ -22,7 +22,7 @@ jobs:
         with:
           role-to-assume: arn:aws:iam::ACCOUNT:role/ROLE
           aws-region: REGION
-      - uses: duncm/openpgp-sign-kms@v0.1.0-rc.1
+      - uses: duncm/openpgp-sign-kms@v0
         id: signature
         with:
           key: arn:aws:kms:REGION:ACCOUNT:key/KEY-ID

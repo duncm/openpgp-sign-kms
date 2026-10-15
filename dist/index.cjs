@@ -23538,18 +23538,18 @@ function _getGlobal(key, defaultValue) {
 
 // cli-release.json
 var cli_release_default = {
-  version: "0.1.0-rc.1",
+  version: "0.1.1",
   repository: "duncm/openpgp-sign-kms-cli",
   assets: {
     "x86_64-unknown-linux-gnu": {
-      name: "openpgp-sign-kms-0.1.0-rc.1-x86_64-unknown-linux-gnu.tar.gz",
-      sha256: "70c079a2d19d3d904ecb3afee39b848d1e099eec36de5a15c77e660e582fffae",
-      binary_sha256: "eecaf4ff6cb244c909762d48c563851809d7b445828fb89dfe6c72957f23192f"
+      name: "openpgp-sign-kms-0.1.1-x86_64-unknown-linux-gnu.tar.gz",
+      sha256: "9fe47fa11f30b13fb0293275cbaf13d6488437ae944fb7bb4e482ff6fee456fe",
+      binary_sha256: "0d9f914c08f38ba2eadd894b9efe9a7577b0f74a30202eca7e76dc3f08ab840e"
     },
     "aarch64-unknown-linux-gnu": {
-      name: "openpgp-sign-kms-0.1.0-rc.1-aarch64-unknown-linux-gnu.tar.gz",
-      sha256: "5e79ea7f8807cc1af0b24548904a142605aebbe8cef47c60319e5088bf7411c5",
-      binary_sha256: "5ce257db64b06049c78749d88303c22b167eedf7cee5eac4147786ba7ea06446"
+      name: "openpgp-sign-kms-0.1.1-aarch64-unknown-linux-gnu.tar.gz",
+      sha256: "108b1a2d5270cb383fa78246f59bd5a5596afe9f9d14c3776d1a3d7c69695cb3",
+      binary_sha256: "647af5d358f949f9b4ced61d883e620a475fa6267e33424518415f7981e9be8e"
     }
   }
 };

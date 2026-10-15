@@ -41,3 +41,16 @@ Dependabot updates npm dependencies and action SHAs through normal PRs.
 The workflow publishes a GitHub Release. The account owner must accept the
 Marketplace Developer Agreement, select categories, and enable Marketplace
 publication in the release UI. Root `action.yml` contains the listing metadata.
+
+## Initial release rehearsal
+
+The [0.1.0-rc.1 rehearsal](https://github.com/duncm/openpgp-sign-kms/actions/runs/38808123904)
+passed the four-runner CI matrix, pinned CLI provenance checks, live AWS tests for
+both key types on both architectures, and publication.
+The [intentional version-mismatch test](https://github.com/duncm/openpgp-sign-kms/actions/runs/38808156675)
+failed validation and skipped CI, integration, and publication. Neither test moved
+a stable major tag. The invalid tag is retained as a test record without a release.
+
+Create release tags with `git tag -s vVERSION -m 'Release VERSION'` and verify
+with `git verify-tag vVERSION` before pushing. Contributor commits must also be
+GPG signed as described in the contributor guide.
