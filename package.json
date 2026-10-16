@@ -2,7 +2,7 @@
   "name": "openpgp-sign-kms-action",
   "version": "0.1.1",
   "private": true,
-  "description": "Sign files in OpenPGP format using AWS KMS",
+  "description": "Sign files in OpenPGP format using AWS or Google Cloud KMS",
   "license": "MIT",
   "type": "module",
   "engines": {

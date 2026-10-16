@@ -23,3 +23,9 @@ See [release procedures](releases.md) for workflow configuration.
 All commits must be OpenPGP/GPG signed. Configure your signing key and use
 `git commit -S`; verify with `git log --show-signature`. Do not disable commit
 signing when preparing changes or releases.
+
+## Google tests
+
+PR CI validates Google resource identifiers and temporary-version lifecycle with
+mocked APIs, without cloud credentials. The Google setup and guardrail documentation
+lives in the CLI repository; [action environment setup](google-oidc.md) links to it.

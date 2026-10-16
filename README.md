@@ -1,6 +1,6 @@
-# OpenPGP Sign with AWS KMS
+# OpenPGP Sign with Cloud KMS
 
-Sign a file with an asymmetric AWS KMS key and produce a GPG-compatible output.
+Sign a file with an asymmetric AWS or Google Cloud KMS key and produce a GPG-compatible output.
 Runs on Linux x86_64 and ARM64 with glibc 2.35+; tested on Ubuntu 22.04/24.04.
 
 ## Quick start
@@ -44,17 +44,39 @@ gpg --import public.asc
 gpg --verify artifact.tar.gz.sig artifact.tar.gz
 ```
 
+## Google Cloud
+
+[Configure Google OIDC](docs/google-oidc.md), then replace the AWS credentials step
+with Google authentication and supply an explicit version:
+
+```yaml
+- uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
+  with:
+    workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+    service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+    project_id: ${{ vars.GCP_PROJECT_ID }}
+- uses: duncm/openpgp-sign-kms@v0
+  with:
+    key: projects/PROJECT/locations/us-central1/keyRings/RING/cryptoKeys/KEY/cryptoKeyVersions/1
+    path: artifact.tar.gz
+    detach_sign: true
+```
+
+Use the same `id-token: write` permission and verification step as above.
+The [setup guide](docs/google-oidc.md#repository-integration-environments) records the
+pending CLI-release/pin dependency for this feature branch.
+
 ## Inputs and output
 
 | Input | Default | Meaning |
 | --- | --- | --- |
-| `key` | Required | Concrete KMS key ARN |
+| `key` | Required | AWS key ARN or Google CryptoKeyVersion resource name |
 | `path` | Required | File to sign |
 | `output_path` | Derived | Output filename |
 | `detach_sign` | `false` | Detached signature |
 | `clear_sign` | `false` | Readable clear-signed text |
 | `armor` | `false` | ASCII armor for attached/detached output |
-| `description` | Empty | Optional CloudTrail audit description |
+| `description` | Empty | Optional provider audit description |
 
 With neither mode flag, output is an attached signed message (`.gpg`).
 Detached output uses `.sig`. Armor and clear signing use `.asc`.

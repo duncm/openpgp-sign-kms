@@ -40,7 +40,7 @@ updates are restricted to the release App; deletion remains blocked.
 ## Publish the action
 
 1. Update `package.json` and its lockfile version through a main-branch change.
-2. Run CI and manual AWS integration for the bundled action on both architectures.
+2. Run CI and manual AWS and Google software integration for the bundled action on both architectures.
 3. Push the matching `vVERSION` tag. The release workflow validates ancestry,
    pinned CLI assets, the committed bundle, and live integration before publishing.
 
@@ -50,7 +50,7 @@ Exact version tags and published release assets are never overwritten.
 
 ## Workflows and checks
 
-CI runs on PRs/main with no AWS access. It checks types, lint, tests, action
+CI runs on PRs/main with no AWS or Google access. It checks types, lint, tests, action
 metadata, local documentation links and byte-for-byte bundle reproducibility.
 Set its `required` check as a branch requirement.
 
@@ -75,3 +75,20 @@ a stable major tag. The invalid tag is retained as a test record without a relea
 Create release tags with `git tag -s vVERSION -m 'Release VERSION'` and verify
 with `git verify-tag vVERSION` before pushing. Contributor commits must also be
 GPG signed as described in the contributor guide.
+
+## Google release dependency
+
+Before merging the Google-support action change, publish the Google-capable CLI,
+run `node scripts/pin-cli.mjs VERSION`, and commit the reviewed pin/checksums and
+rebuilt bundle. The existing 0.1.2 pin is intentionally unchanged until real release
+assets exist; do not invent checksums or use a moving download URL.
+
+Configure `gcp-integration` and `gcp-hsm` using [Google OIDC setup](google-oidc.md).
+The release workflow requires AWS **and** Google software integration. Manual HSM
+smoke tests remain optional. Run the Google orphan cleanup workflow to confirm its
+permissions, then perform a prerelease rehearsal without moving `v0`.
+
+No live Google integration or release run has been recorded yet.
+
+The Actions allowlist permits only the pinned commits of Google's auth/setup-gcloud
+actions. Review an allowlist update alongside any Dependabot change to those pins.
