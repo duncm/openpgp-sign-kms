@@ -4,7 +4,9 @@ The action and CLI are independently versioned. Publish a tested CLI release fir
 The CLI's [release guide](https://github.com/duncm/openpgp-sign-kms-cli/blob/main/docs/releases.md)
 owns shared environment setup, OIDC variables, release gates and recovery procedures.
 Configure the same `AWS_ROLE_ARN` and `AWS_REGION` variables in this repository's
-`integration` environment. Each matrix job creates one temporary key; no permanent
+`integration` environment; the target test region is `us-west-2`. Follow the CLI’s
+[policy and region cutover](https://github.com/duncm/openpgp-sign-kms-cli/blob/main/docs/aws-guardrails.md)
+before changing an existing environment. Each matrix job creates one temporary key; no permanent
 key ARN is required. An `always()` step schedules deletion after testing, and the
 **Orphan key cleanup** workflow runs daily to recover expired keys. Manual cleanup
 defaults to dry-run mode. The CLI's [temporary-key guide and IAM policy](https://github.com/duncm/openpgp-sign-kms-cli/blob/main/docs/temporary-test-keys.md)
