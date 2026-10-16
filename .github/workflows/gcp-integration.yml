@@ -1,0 +1,129 @@
+name: Google software integration
+on:
+  workflow_dispatch:
+  workflow_call:
+permissions:
+  contents: read
+concurrency:
+  group: gcp-integration-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  test:
+    permissions:
+      contents: read
+      id-token: write
+    environment: gcp-integration
+    timeout-minutes: 60
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, ubuntu-22.04-arm]
+        key: [rsa3072, ed25519]
+    env:
+      GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+      GCP_LOCATION: us-central1
+      GCP_KEY_KIND: ${{ matrix.key }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+      - name: Trusted source and configuration
+        run: |
+          git merge-base --is-ancestor HEAD origin/main
+          test -n "$GCP_PROJECT_ID"
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: node scripts/pin-cli.mjs --check
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - id: cli
+        run: npx tsx scripts/resolve-cli.ts
+      - name: Authenticate with Google OIDC
+        id: credentials
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+          project_id: ${{ vars.GCP_PROJECT_ID }}
+      - uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3
+      - name: Check runtime permissions
+        run: python3 scripts/gcp-check-permissions.py software
+      - name: Create temporary versions
+        id: keys
+        run: python3 scripts/gcp-test-keys.py create --state "$RUNNER_TEMP/gcp-versions.jsonl" --kind "$GCP_KEY_KIND"
+      - name: Prepare input
+        run: printf 'Google integration test\n- signed text\n' > input.txt
+      - uses: ./
+        with:
+          key: ${{ env.GCP_KEY_VERSION }}
+          path: input.txt
+          output_path: attached.gpg
+          description: gcp-action-${{ github.run_id }}-${{ github.run_attempt }}-${{ runner.arch }}-${{ env.GCP_KEY_KIND }}
+      - uses: ./
+        with:
+          key: ${{ env.GCP_KEY_VERSION }}
+          path: input.txt
+          output_path: attached.asc
+          description: gcp-action-${{ github.run_id }}-${{ github.run_attempt }}-${{ runner.arch }}-${{ env.GCP_KEY_KIND }}
+          armor: true
+      - uses: ./
+        with:
+          key: ${{ env.GCP_KEY_VERSION }}
+          path: input.txt
+          output_path: detached.sig
+          description: gcp-action-${{ github.run_id }}-${{ github.run_attempt }}-${{ runner.arch }}-${{ env.GCP_KEY_KIND }}
+          detach_sign: true
+      - uses: ./
+        with:
+          key: ${{ env.GCP_KEY_VERSION }}
+          path: input.txt
+          output_path: detached.asc
+          description: gcp-action-${{ github.run_id }}-${{ github.run_attempt }}-${{ runner.arch }}-${{ env.GCP_KEY_KIND }}
+          detach_sign: true
+          armor: true
+      - uses: ./
+        with:
+          key: ${{ env.GCP_KEY_VERSION }}
+          path: input.txt
+          output_path: clear.asc
+          description: gcp-action-${{ github.run_id }}-${{ github.run_attempt }}-${{ runner.arch }}-${{ env.GCP_KEY_KIND }}
+          clear_sign: true
+      - name: Verify action outputs and audit description
+        env:
+          CLI: ${{ steps.cli.outputs.cli }}
+          DESCRIPTION: gcp-action-${{ github.run_id }}-${{ github.run_attempt }}-${{ runner.arch }}-${{ env.GCP_KEY_KIND }}
+        run: |
+          export GNUPGHOME="$(mktemp -d)"
+          "$CLI" --export -u "$GCP_KEY_VERSION" --export-name Test --export-email test@example.com -a -o public.asc
+          gpg --batch --import public.asc
+          gpg --verify attached.gpg
+          gpg --batch --output extracted.txt --decrypt attached.gpg
+          cmp input.txt extracted.txt
+          gpg --verify attached.asc
+          gpg --verify detached.sig input.txt
+          gpg --verify detached.asc input.txt
+          gpg --verify clear.asc
+          python3 scripts/gcp-audit.py "$DESCRIPTION" "$GCP_KEY_VERSION"
+      - name: Refresh cleanup credentials
+        if: "${{ always() && steps.credentials.outcome == 'success' && steps.keys.outcome != 'skipped' }}"
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+          project_id: ${{ vars.GCP_PROJECT_ID }}
+      - name: Destroy temporary versions
+        if: ${{ always() && steps.credentials.outcome == 'success' && steps.keys.outcome != 'skipped' }}
+        timeout-minutes: 15
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/gcp-test-keys.py cleanup --state "$RUNNER_TEMP/gcp-versions.jsonl" 2>&1 | tee "$RUNNER_TEMP/gcp-cleanup.log"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: gcp-cleanup-${{ runner.arch }}-${{ env.GCP_KEY_KIND }}
+          path: ${{ runner.temp }}/gcp-cleanup.log

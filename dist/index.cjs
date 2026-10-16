@@ -23100,6 +23100,17 @@ function info(message) {
 var import_promises = require("node:fs/promises");
 var import_node_fs = require("node:fs");
 var import_node_path = require("node:path");
+function validKey(key) {
+  if (/^arn:(aws|aws-cn|aws-us-gov):kms:[a-z0-9-]+:\d{12}:key\/(?:[0-9a-f-]{36}|mrk-[0-9a-f]{32})$/i.test(
+    key
+  ))
+    return true;
+  const match = /^projects\/([A-Za-z0-9-]{1,63})\/locations\/([A-Za-z0-9-]{1,63})\/keyRings\/([A-Za-z0-9_-]{1,63})\/cryptoKeys\/([A-Za-z0-9_-]{1,63})\/cryptoKeyVersions\/([1-9][0-9]*)$/.exec(
+    key
+  );
+  const version = match?.[5];
+  return version !== void 0 && version.length <= 20 && BigInt(version) <= 18446744073709551615n;
+}
 function boolean(value, name) {
   if (value === "" || value === "false") return false;
   if (value === "true") return true;
@@ -23108,10 +23119,10 @@ function boolean(value, name) {
 function parse(inputs, cwd = process.cwd()) {
   const key = inputs.key?.trim();
   const path5 = inputs.path;
-  if (!key || !/^arn:(aws|aws-cn|aws-us-gov):kms:[a-z0-9-]+:\d{12}:key\/(?:[0-9a-f-]{36}|mrk-[0-9a-f]{32})$/i.test(
-    key
-  ))
-    throw new Error("key must be a concrete AWS KMS key ARN");
+  if (!key || !validKey(key))
+    throw new Error(
+      "key must be a concrete AWS KMS key ARN or Google CryptoKeyVersion resource name"
+    );
   if (!path5) throw new Error("path is required");
   const detached = boolean(inputs.detach_sign ?? "", "detach_sign");
   const clear = boolean(inputs.clear_sign ?? "", "clear_sign");

@@ -1,12 +1,12 @@
-name: OpenPGP Sign with AWS KMS
-description: Create OpenPGP signatures using an asymmetric AWS KMS key
+name: OpenPGP Sign with Cloud KMS
+description: Create OpenPGP signatures using an asymmetric AWS or Google Cloud KMS key
 author: duncm
 branding:
   icon: lock
   color: blue
 inputs:
   key:
-    description: AWS KMS asymmetric signing key ARN
+    description: AWS KMS key ARN or Google CryptoKeyVersion resource name
     required: true
   path:
     description: File to sign

@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { mkdtemp, writeFile, symlink, link, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { parse, validate, argumentsFor } from "../src/config.js";
+import { parse, validate, argumentsFor, validKey } from "../src/config.js";
 import { platformKey, digest, run, verifyFile } from "../src/download.js";
 const key =
   "arn:aws:kms:us-east-1:123456789012:key/12345678-1234-1234-1234-123456789012";
@@ -85,4 +85,29 @@ test("child failures are propagated", async () => {
   await assert.rejects(run("/bin/false", []));
   await assert.rejects(run("/does/not/exist", []));
   await run("/bin/true", []);
+});
+
+test("Google keys require an explicit version and preserve the identifier", () => {
+  const google =
+    "projects/test-project/locations/us-central1/keyRings/test/cryptoKeys/rsa/cryptoKeyVersions/1";
+  assert.ok(validKey(google));
+  for (const invalid of [
+    google.replace(/1$/, "0"),
+    google.replace(/1$/, "01"),
+    google.replace(/1$/, "latest"),
+    google.replace(/1$/, "18446744073709551616"),
+    google.replace("/cryptoKeyVersions/1", ""),
+    `https://cloudkms.googleapis.com/v1/${google}`,
+    google.replace("rsa", "rsa%2fother"),
+  ])
+    assert.equal(validKey(invalid), false, invalid);
+  for (const extra of [
+    {},
+    { armor: "true" },
+    { detach_sign: "true" },
+    { clear_sign: "true" },
+  ] as Record<string, string>[]) {
+    const config = parse({ key: google, path: "input", ...extra });
+    assert.ok(argumentsFor(config).includes(google));
+  }
 });

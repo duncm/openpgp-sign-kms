@@ -3,3 +3,6 @@ coverage/
 .env
 
 __pycache__/
+
+# Temporary ADC configuration from google-github-actions/auth
+gha-creds-*.json
