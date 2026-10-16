@@ -66,6 +66,9 @@ runs on `main` only. Use different providers/service accounts as generated.
 Routine integration creates one software version per architecture/algorithm matrix
 job. HSM smoke creates one RSA-3072 version on x86_64. Both clean up in `always()`;
 a daily workflow handles abandoned versions. Manual cleanup defaults to dry-run.
+For interrupted jobs, `recover_versions` accepts a JSON array of exact version names
+from the uploaded journal; those names bypass the age threshold but retain all
+resource and metadata checks. See the CLI project guide for the recovery procedure.
 
 **Rollout dependency:** the currently pinned CLI 0.1.2 supports AWS only. Keep this
 feature branch unmerged until a Google-capable CLI has passed live integration and
